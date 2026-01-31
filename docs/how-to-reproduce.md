@@ -7,6 +7,7 @@ This guide walks through generating data, running pipelines, and capturing bench
 - Python 3.9+ with `psutil` and `pyyaml` available.
 - A Flow-Pipe binary on your `PATH` (for Flow-Pipe runs).
 - Apache Spark (for Spark runs).
+- Alternatively, Docker + Docker Compose (for containerized runs).
 
 ## 1) Generate TPC-H data
 
@@ -42,6 +43,35 @@ Spark example:
 ```bash
 python -m runners.run_benchmark --benchmark tpch-q6 --engine spark --spark-submit spark-submit --spark-master local[*]
 ```
+
+### Running benchmarks in Docker
+
+If you prefer containerized runs, build the runner image and execute benchmarks using the binaries baked into the container.
+
+```bash
+docker compose -f docker/docker-compose.yaml build runner
+```
+
+Flow-Pipe in Docker:
+
+```bash
+docker compose -f docker/docker-compose.yaml run --rm runner \
+  --benchmark tpch-q6 \
+  --engine flowpipe \
+  --flowpipe-command-template /opt/flow-pipe/bin/flow-pipe
+```
+
+Spark in Docker:
+
+```bash
+docker compose -f docker/docker-compose.yaml run --rm runner \
+  --benchmark tpch-q6 \
+  --engine spark \
+  --spark-submit /opt/spark/bin/spark-submit \
+  --spark-master local[*]
+```
+
+The compose file mounts the repository into `/workspace` so input data and result JSONs are stored on the host filesystem.
 
 ## 4) Review results
 
