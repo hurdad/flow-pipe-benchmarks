@@ -73,10 +73,27 @@ docker compose -f docker/docker-compose.yaml run --rm runner \
 
 The compose file mounts the repository into `/workspace` so input data and result JSONs are stored on the host filesystem.
 
-## 4) Review results
+## 4) Validate Flow-Pipe vs Spark outputs
+
+After running both engines for the same pipeline, compare the output datasets to ensure they match. This uses Spark to read both outputs and validate row-level parity.
+
+```bash
+python -m runners.validate_results --pipeline tpch_q6
+```
+
+You can override output paths or adjust numeric tolerance if needed:
+
+```bash
+python -m runners.validate_results --pipeline tpch_q1 \
+  --flowpipe-output data/tpch/sf10-results/tpch_q1.parquet \
+  --spark-output data/tpch/sf10-results/tpch_q1 \
+  --tolerance 1e-6
+```
+
+## 5) Review results
 
 Result JSON files are written to `results/` by default. Each file includes command metadata and per-run metrics. Adjust `--results-output` to direct output elsewhere.
 
-## 5) Record environment details
+## 6) Record environment details
 
 Capture hardware configuration (see `docs/hardware-setup.md`) and any configuration overrides used during the run to ensure results are comparable.
