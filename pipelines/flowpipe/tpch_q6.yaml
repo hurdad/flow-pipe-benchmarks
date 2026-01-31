@@ -1,0 +1,44 @@
+queues:
+  - name: lineitem_rows
+    capacity: 256
+
+  - name: q6_result
+    capacity: 32
+
+stages:
+  - name: lineitem_reader
+    type: parquet_arrow_source
+    threads: 2
+    output_queue: lineitem_rows
+    config:
+      path: "data/tpch/sf10-parquet/lineitem.parquet"
+      common:
+        filesystem: FILE_SYSTEM_LOCAL
+        compression: COMPRESSION_AUTO
+
+  - name: q6_query
+    type: datafusion_sql_transform
+    threads: 4
+    input_queues:
+      - queue: lineitem_rows
+        table: lineitem
+    output_queue: q6_result
+    config:
+      sql: |
+        SELECT
+          sum(l_extendedprice * l_discount) AS revenue
+        FROM lineitem
+        WHERE l_shipdate >= DATE '1994-01-01'
+          AND l_shipdate < DATE '1995-01-01'
+          AND l_discount BETWEEN 0.05 AND 0.07
+          AND l_quantity < 24
+
+  - name: q6_writer
+    type: parquet_arrow_sink
+    threads: 1
+    input_queue: q6_result
+    config:
+      path: "data/tpch/sf10-results/tpch_q6.parquet"
+      common:
+        filesystem: FILE_SYSTEM_LOCAL
+        compression: COMPRESSION_SNAPPY

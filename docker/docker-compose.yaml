@@ -1,0 +1,26 @@
+services:
+  runner:
+    build:
+      context: ..
+      dockerfile: docker/runner.Dockerfile
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+    entrypoint: ["python", "-m", "runners.run_benchmark"]
+
+  flowpipe:
+    build:
+      context: ..
+      dockerfile: docker/flowpipe.Dockerfile
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+
+  spark:
+    build:
+      context: ..
+      dockerfile: docker/spark.Dockerfile
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+    entrypoint: ["spark-submit"]

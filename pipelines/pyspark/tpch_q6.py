@@ -1,6 +1,6 @@
 import argparse
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import avg, col, count, lit, sum as sum_
+from pyspark.sql.functions import col, lit, sum as sum_
 from pyspark.sql.types import (
     DateType,
     DoubleType,
@@ -48,7 +48,7 @@ def read_lineitem(spark, path, fmt, delimiter):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="TPC-H Q1 (Spark)")
+    parser = argparse.ArgumentParser(description="TPC-H Q6 (Spark)")
     parser.add_argument("--input", required=True, help="Path to lineitem data")
     parser.add_argument("--format", default="parquet", choices=["parquet", "csv"])
     parser.add_argument("--delimiter", default="|")
@@ -56,28 +56,18 @@ def main():
     parser.add_argument("--output-format", default="parquet", choices=["parquet", "csv"])
     args = parser.parse_args()
 
-    spark = SparkSession.builder.appName("tpch-q1").getOrCreate()
+    spark = SparkSession.builder.appName("tpch-q6").getOrCreate()
     lineitem = read_lineitem(spark, args.input, args.format, args.delimiter)
 
-    cutoff_date = col("l_shipdate") <= lit("1998-09-02").cast("date")
-    filtered = lineitem.filter(cutoff_date)
-
-    result = (
-        filtered.groupBy("l_returnflag", "l_linestatus")
-        .agg(
-            sum_("l_quantity").alias("sum_qty"),
-            sum_("l_extendedprice").alias("sum_base_price"),
-            sum_(col("l_extendedprice") * (1 - col("l_discount"))).alias("sum_disc_price"),
-            sum_(col("l_extendedprice") * (1 - col("l_discount")) * (1 + col("l_tax"))).alias(
-                "sum_charge"
-            ),
-            avg("l_quantity").alias("avg_qty"),
-            avg("l_extendedprice").alias("avg_price"),
-            avg("l_discount").alias("avg_disc"),
-            count("*").alias("count_order"),
-        )
-        .orderBy("l_returnflag", "l_linestatus")
+    filtered = lineitem.filter(
+        (col("l_shipdate") >= lit("1994-01-01").cast("date"))
+        & (col("l_shipdate") < lit("1995-01-01").cast("date"))
+        & (col("l_discount") >= 0.05)
+        & (col("l_discount") <= 0.07)
+        & (col("l_quantity") < 24)
     )
+
+    result = filtered.select(sum_(col("l_extendedprice") * col("l_discount")).alias("revenue"))
 
     if args.output_format == "parquet":
         result.write.mode("overwrite").parquet(args.output)
