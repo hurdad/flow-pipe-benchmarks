@@ -1,0 +1,16 @@
+name: batch-etl-csv-to-parquet
+
+dataset: tpch-sf10
+
+pipeline: csv_to_parquet
+
+metrics:
+  - throughput_rows
+  - throughput_mb
+  - cpu_percent
+  - peak_rss
+  - stage_latency
+
+runs:
+  warmup: 1
+  measured: 5

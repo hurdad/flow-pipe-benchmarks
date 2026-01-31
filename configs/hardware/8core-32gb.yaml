@@ -1,0 +1,4 @@
+cpu_limit: 8
+memory_limit_gb: 32
+disk: nvme
+filesystem: ext4

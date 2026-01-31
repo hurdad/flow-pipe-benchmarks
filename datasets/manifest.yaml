@@ -1,0 +1,7 @@
+datasets:
+  - name: tpch-sf10
+    format: csv
+    scale_factor: 10
+    source: tpch-dbgen
+    location: s3://flowpipe-bench/tpch/sf10
+    schema: schemas/tpch.yaml
