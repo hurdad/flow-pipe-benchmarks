@@ -40,6 +40,37 @@ This repository contains benchmark definitions and runnable pipelines used to co
 
 For detailed guidance, see the documentation in `docs/`.
 
+## Run benchmarks in Docker
+
+The repository ships with container images for the benchmark runner, Flow-Pipe, and Spark. Build the runner image and execute benchmarks inside the container while using the bundled engine binaries.
+
+1. **Build the benchmark runner image**:
+
+   ```bash
+   docker compose -f docker/docker-compose.yaml build runner
+   ```
+
+2. **Run a Flow-Pipe benchmark in Docker**:
+
+   ```bash
+   docker compose -f docker/docker-compose.yaml run --rm runner \
+     --benchmark tpch-q6 \
+     --engine flowpipe \
+     --flowpipe-command-template /opt/flow-pipe/bin/flow-pipe
+   ```
+
+3. **Run a Spark benchmark in Docker**:
+
+   ```bash
+   docker compose -f docker/docker-compose.yaml run --rm runner \
+     --benchmark tpch-q6 \
+     --engine spark \
+     --spark-submit /opt/spark/bin/spark-submit \
+     --spark-master local[*]
+   ```
+
+The `docker-compose.yaml` mounts the repository into `/workspace` so datasets and results are stored on the host. Use the same data generation scripts before running the containerized benchmarks.
+
 ## Benchmarks included
 
 - `batch-etl-csv-to-parquet`
