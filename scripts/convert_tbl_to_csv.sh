@@ -80,11 +80,14 @@ for tbl_file in "${files[@]}"; do
   base_name=$(basename "${tbl_file%.tbl}")
   output_file="$output_dir/${base_name}.csv"
   awk -v input_delim="$input_delim" -v output_delim="$output_delim" '
-    BEGIN { FS = input_delim; OFS = output_delim }
+    BEGIN {
+      escaped = input_delim
+      gsub(/[][\\.^$*+?()|{}]/, "\\\\&", escaped)
+      FS = escaped
+      OFS = output_delim
+    }
     {
-      if (substr($0, length($0), 1) == input_delim) {
-        $0 = substr($0, 1, length($0) - 1)
-      }
+      $1 = $1
       print
     }
   ' "$tbl_file" > "$output_file"
