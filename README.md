@@ -21,6 +21,8 @@ This repository contains benchmark definitions and runnable pipelines used to co
 
    ```bash
    scripts/generate_tpch.sh --scale 10
+   # Optional: generate data in 8 chunks
+   scripts/generate_tpch.sh --scale 10 --chunks 8
    scripts/convert_tbl_to_csv.sh --input data/tpch/sf10 --output data/tpch/sf10
    ```
 

@@ -13,6 +13,7 @@ This guide walks through generating data, running pipelines, and capturing bench
 
 ```bash
 scripts/generate_tpch.sh --scale 10
+scripts/generate_tpch.sh --scale 10 --chunks 8
 scripts/convert_tbl_to_csv.sh --input data/tpch/sf10 --output data/tpch/sf10
 ```
 

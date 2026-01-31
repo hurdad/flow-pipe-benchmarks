@@ -3,12 +3,13 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: generate_tpch.sh [--scale <factor>] [--output <dir>] [--dbgen-dir <dir>]
+Usage: generate_tpch.sh [--scale <factor>] [--chunks <count>] [--output <dir>] [--dbgen-dir <dir>]
 
 Generates TPC-H .tbl files using tpch-dbgen and writes them to an output directory.
 
 Options:
   --scale      Scale factor for data generation. Defaults to 10.
+  --chunks     Number of chunks to generate. Defaults to 1 (no chunking).
   --output     Output directory for .tbl files. Defaults to data/tpch/sf<scale>.
   --dbgen-dir  Directory containing the tpch-dbgen source/build. Defaults to third_party/tpch-dbgen.
   -h, --help   Show this help message.
@@ -16,6 +17,7 @@ USAGE
 }
 
 scale_factor="10"
+chunks="1"
 output_dir=""
 dbgen_dir=""
 
@@ -27,6 +29,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --output)
       output_dir="$2"
+      shift 2
+      ;;
+    --chunks)
+      chunks="$2"
       shift 2
       ;;
     --dbgen-dir)
@@ -56,6 +62,11 @@ if [[ -z "$dbgen_dir" ]]; then
   dbgen_dir="$repo_root/third_party/tpch-dbgen"
 fi
 
+if ! [[ "$chunks" =~ ^[0-9]+$ ]] || [[ "$chunks" -lt 1 ]]; then
+  echo "Chunks must be a positive integer (got: $chunks)" >&2
+  exit 1
+fi
+
 mkdir -p "$output_dir"
 
 if [[ ! -x "$dbgen_dir/dbgen" ]]; then
@@ -79,27 +90,54 @@ cleanup() {
 }
 trap cleanup EXIT
 
-(
-   cd "$tmp_dir"
-   cp "$dbgen_dir/dists.dss" .
-  "$dbgen_dir/dbgen" -s "$scale_factor" -f
-)
+generate_chunk() {
+  local chunk_index="$1"
+  local chunk_output_dir="$output_dir"
 
-shopt -s nullglob
-files=("$tmp_dir"/*.tbl)
-if [[ ${#files[@]} -eq 0 ]]; then
-  echo "No .tbl files generated." >&2
-  exit 1
-fi
+  if [[ "$chunks" -gt 1 ]]; then
+    chunk_output_dir="$output_dir/chunk-${chunk_index}"
+    mkdir -p "$chunk_output_dir"
+  fi
 
-for tbl_file in "${files[@]}"; do
-  chmod 777 "$tbl_file"
-  mv "$tbl_file" "$output_dir/"
-  echo "Wrote $(basename "$tbl_file") to $output_dir"
- done
+  (
+     cd "$tmp_dir"
+     rm -f ./*.tbl
+     cp "$dbgen_dir/dists.dss" .
+     if [[ "$chunks" -gt 1 ]]; then
+       "$dbgen_dir/dbgen" -s "$scale_factor" -f -C "$chunks" -S "$chunk_index"
+     else
+       "$dbgen_dir/dbgen" -s "$scale_factor" -f
+     fi
+  )
 
-cat <<EOF
+  shopt -s nullglob
+  files=("$tmp_dir"/*.tbl)
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "No .tbl files generated." >&2
+    exit 1
+  fi
+
+  for tbl_file in "${files[@]}"; do
+    chmod 777 "$tbl_file"
+    mv "$tbl_file" "$chunk_output_dir/"
+    echo "Wrote $(basename "$tbl_file") to $chunk_output_dir"
+  done
+}
+
+for ((chunk_index=1; chunk_index<=chunks; chunk_index++)); do
+  generate_chunk "$chunk_index"
+done
+
+if [[ "$chunks" -gt 1 ]]; then
+  cat <<EOF
+TPC-H data generated at: $output_dir (chunked into chunk-<n> subdirectories)
+To convert to CSV per chunk:
+  $script_dir/convert_tbl_to_csv.sh --input "$output_dir/chunk-1" --output "$output_dir/chunk-1"
+EOF
+else
+  cat <<EOF
 TPC-H data generated at: $output_dir
 To convert to CSV:
   $script_dir/convert_tbl_to_csv.sh --input "$output_dir" --output "$output_dir"
 EOF
+fi
