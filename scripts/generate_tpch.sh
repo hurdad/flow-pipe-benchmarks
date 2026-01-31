@@ -80,7 +80,8 @@ cleanup() {
 trap cleanup EXIT
 
 (
-  cd "$tmp_dir"
+   cd "$tmp_dir"
+   cp "$dbgen_dir/dists.dss" .
   "$dbgen_dir/dbgen" -s "$scale_factor" -f
 )
 
@@ -92,6 +93,7 @@ if [[ ${#files[@]} -eq 0 ]]; then
 fi
 
 for tbl_file in "${files[@]}"; do
+  chmod 777 "$tbl_file"
   mv "$tbl_file" "$output_dir/"
   echo "Wrote $(basename "$tbl_file") to $output_dir"
  done
