@@ -1,0 +1,61 @@
+queues:
+  - name: lineitem_rows
+    capacity: 256
+
+  - name: part_rows
+    capacity: 256
+
+  - name: q14_result
+    capacity: 32
+
+stages:
+  - name: lineitem_reader
+    type: parquet_arrow_source
+    threads: 2
+    output_queue: lineitem_rows
+    config:
+      path: "data/tpch/sf10-parquet/lineitem.parquet"
+      common:
+        filesystem: FILE_SYSTEM_LOCAL
+        compression: COMPRESSION_AUTO
+
+  - name: part_reader
+    type: parquet_arrow_source
+    threads: 2
+    output_queue: part_rows
+    config:
+      path: "data/tpch/sf10-parquet/part.parquet"
+      common:
+        filesystem: FILE_SYSTEM_LOCAL
+        compression: COMPRESSION_AUTO
+
+  - name: q14_query
+    type: datafusion_sql_transform
+    threads: 4
+    input_queues:
+      - queue: lineitem_rows
+        table: lineitem
+      - queue: part_rows
+        table: part
+    output_queue: q14_result
+    config:
+      sql: |
+        SELECT
+          100.00 * sum(CASE
+            WHEN p_type LIKE 'PROMO%' THEN l_extendedprice * (1 - l_discount)
+            ELSE 0
+          END) / sum(l_extendedprice * (1 - l_discount)) AS promo_revenue
+        FROM lineitem
+        JOIN part ON l_partkey = p_partkey
+        WHERE l_shipdate >= DATE '1995-09-01'
+          AND l_shipdate < DATE '1995-10-01'
+
+  - name: q14_writer
+    type: parquet_arrow_sink
+    threads: 1
+    input_queue: q14_result
+    config:
+      path: "data/tpch/sf10-results/tpch_q14.parquet"
+      common:
+        filesystem: FILE_SYSTEM_LOCAL
+        compression: COMPRESSION_SNAPPY

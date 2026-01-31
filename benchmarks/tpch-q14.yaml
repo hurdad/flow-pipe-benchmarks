@@ -1,0 +1,16 @@
+name: tpch-q14
+
+dataset: tpch-sf10
+
+pipeline: tpch_q14
+
+metrics:
+  - throughput_rows
+  - throughput_mb
+  - cpu_percent
+  - peak_rss
+  - stage_latency
+
+runs:
+  warmup: 1
+  measured: 5
